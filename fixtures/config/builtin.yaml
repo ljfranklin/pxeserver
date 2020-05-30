@@ -1,0 +1,7 @@
+hosts:
+- mac: "52:54:00:12:34:56"
+  kernel:
+    path: '{{ builtin "installer/x86_64/kernel" }}'
+  initrds:
+  - path: '{{ builtin "installer/x86_64/initrd" }}'
+  boot_args: []

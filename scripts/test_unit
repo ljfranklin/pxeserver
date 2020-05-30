@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu
+
+project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+
+pushd "${project_dir}" > /dev/null
+  docker run \
+    -v "$PWD:/build" \
+    -w /build \
+    -it ljfranklin/pxeserver:integration \
+    /bin/bash -c "go test -run 'Test[^Integration]'"
+popd > /dev/null

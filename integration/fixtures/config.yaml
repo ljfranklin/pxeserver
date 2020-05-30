@@ -1,0 +1,39 @@
+hosts:
+- mac: "52:54:00:12:34:56"
+  kernel:
+    path: '{{ builtin "installer/x86_64/kernel" }}'
+  initrds:
+  - path: '{{ builtin "installer/x86_64/initrd" }}'
+  # TODO: add vars
+  files:
+  - id: cloud_init_metadata
+    path: fixtures/meta-data
+  - id: cloud_init_networking
+    path: fixtures/network-config
+  - id: cloud_init_userdata
+    path: fixtures/user-data
+    # TODO: gzip before sending
+  - id: test_image
+    url: https://storage.googleapis.com/pxeserver-assets/ubuntu-cloud-amd64.img
+    # TODO: implement checksum check
+    sha256: cc10e2ab1b73c202ff06cef744511c758b1a8b719c7883b8e76d198ce0c4f2fa
+    # TODO: automatic image convert
+    image_convert:
+      input_format: qcow2
+  boot_args:
+  - "netboot_installer={{ .vars.installer | toRawJson | b64enc }}"
+  vars:
+    installer:
+      files:
+      - url: '{{ file_url "cloud_init_metadata" }}'
+        dest: /root/var/lib/cloud/seed/nocloud/meta-data
+      - url: '{{ file_url "cloud_init_networking" }}'
+        dest: /root/var/lib/cloud/seed/nocloud/network-config
+      - url: '{{ file_url "cloud_init_userdata" }}'
+        dest: /root/var/lib/cloud/seed/nocloud/user-data
+      disks:
+      - url: '{{ file_url "test_image" }}'
+        dest_device: /dev/sda
+        mounts:
+        - partition: /dev/sda1
+          path: /root

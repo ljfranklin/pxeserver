@@ -1,0 +1,12 @@
+hosts:
+- mac: "52:54:00:12:34:56"
+  kernel:
+    path: fixtures/x86_64/bzImage
+  initrds:
+  - path: fixtures/x86_64/netboot.cpio
+  files:
+  - id: preseed
+    path: fixtures/simple-preseed.cfg
+  boot_args:
+  - 'preseed/url={{ file_url "preseed" }}'
+  - 'preseed/url/checksum={{ file_md5 "preseed" }}'

@@ -1,0 +1,10 @@
+#network-config
+# vim: syntax=yaml
+#
+version: 2
+ethernets:
+  interface0:
+    match:
+      # assumes a single ethernet interface
+      name: 'e*'
+    dhcp4: true

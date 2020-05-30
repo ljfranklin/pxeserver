@@ -1,0 +1,22 @@
+hosts:
+- mac: "52:54:00:12:34:56"
+  kernel:
+    path: fixtures/x86_64/bzImage
+  initrds:
+  - path: fixtures/x86_64/netboot.cpio
+  files:
+  - id: template
+    path: fixtures/vars.json
+    template: true
+    vars:
+      default_var: "default_value"
+      host_var: "will be overridden"
+      global_var: "will be overridden"
+  boot_args:
+  - 'preseed/url={{ file_url "preseed" }}'
+  - 'preseed/url/checksum={{ file_md5 "preseed" }}'
+  vars:
+    host_var: "host_value"
+vars:
+  global_var: "global_value"
+  host_var: "will be ignored since non-empty in hosts[0].vars"
