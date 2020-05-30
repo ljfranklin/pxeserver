@@ -141,13 +141,28 @@ func (f Files) readRemoteFile(file File) (io.ReadCloser, int64, error) {
 		return nil, -1, err
 	}
 
-	_, err = io.Copy(tmpfile, resp.Body)
+	hasher := sha256.New()
+	var teeReader io.Reader
+	if file.SHA256 != "" {
+		teeReader = io.TeeReader(resp.Body, hasher)
+	} else {
+		teeReader = resp.Body
+	}
+
+	_, err = io.Copy(tmpfile, teeReader)
 	if err != nil {
 		return nil, -1, err
 	}
 	_, err = tmpfile.Seek(0, 0)
 	if err != nil {
 		return nil, -1, err
+	}
+
+	if file.SHA256 != "" {
+		actualHash := fmt.Sprintf("%x", hasher.Sum(nil))
+		if actualHash != file.SHA256 {
+			return nil, -1, fmt.Errorf("expected '%s' to have checksum '%s' but was '%s'", file.ID, file.SHA256, actualHash)
+		}
 	}
 
 	stat, err := tmpfile.Stat()

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO: replace with Makefile
+
 set -eu
 
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"

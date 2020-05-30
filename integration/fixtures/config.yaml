@@ -15,8 +15,7 @@ hosts:
     # TODO: gzip before sending
   - id: test_image
     url: https://storage.googleapis.com/pxeserver-assets/ubuntu-cloud-amd64.img
-    # TODO: implement checksum check
-    sha256: cc10e2ab1b73c202ff06cef744511c758b1a8b719c7883b8e76d198ce0c4f2fa
+    sha256: bc858c757d027259ecee28202c1c6cf7a7687aa99b415d864050823bd88741cd
     # TODO: automatic image convert
     image_convert:
       input_format: qcow2

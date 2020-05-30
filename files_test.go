@@ -150,6 +150,30 @@ func TestRemoteRead(t *testing.T) {
   mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
 }
 
+func TestErrorOnRemoteReadWithBadChecksum(t *testing.T) {
+	assert := assert.New(t)
+
+	assetsServer := httptest.NewServer(http.FileServer(http.Dir(fixturesDir())))
+	defer assetsServer.Close()
+
+	mockRenderer := new(MockRenderer)
+
+	mockRenderer.On("RenderPath", mock.Anything).Return("", nil).Maybe()
+
+	f, err := pxeserver.LoadFiles([]pxeserver.File{
+		{
+			ID:  "some-id",
+			URL: fmt.Sprintf("%s/files/simple.txt", assetsServer.URL),
+			SHA256: "1234",
+		},
+	}, mockRenderer)
+	assert.NoError(err)
+
+	_, _, err = f.Read("some-id")
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "1234")
+}
+
 func TestReadErrorOnMissingFile(t *testing.T) {
 	assert := assert.New(t)
 
