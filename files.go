@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
+	"os/exec"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -75,12 +76,24 @@ func (f Files) Read(id string) (io.ReadCloser, int64, error) {
 		return nil, -1, fmt.Errorf("Could not find file with ID '%s'", id)
 	}
 
+	var fileReader io.ReadCloser
+	var fileSize int64
+	var fileErr error
 	if strings.HasPrefix(file.Path, "__builtin__") {
-		return f.readBuiltinFile(file)
+		fileReader, fileSize, fileErr = f.readBuiltinFile(file)
 	} else if file.URL != "" {
-		return f.readRemoteFile(file)
+		fileReader, fileSize, fileErr = f.readRemoteFile(file)
+	} else {
+		fileReader, fileSize, fileErr = f.readLocalFile(file)
 	}
-	return f.readLocalFile(file)
+	if fileErr != nil {
+		return nil, -1, fileErr
+	}
+
+	if file.ImageConvert.InputFormat != "" {
+		return f.convertQcowToRaw(fileReader)
+	}
+	return fileReader, fileSize, nil
 }
 
 func (f Files) readLocalFile(file File) (io.ReadCloser, int64, error) {
@@ -183,4 +196,47 @@ func (f Files) readBuiltinFile(file File) (io.ReadCloser, int64, error) {
 		return nil, -1, err
 	}
 	return ioutil.NopCloser(bytes.NewReader(data)), int64(len(data)), nil
+}
+
+func (f Files) convertQcowToRaw(qcowReader io.ReadCloser) (io.ReadCloser, int64, error) {
+	// TODO: are these file permissions okay?
+	inputFile, err := ioutil.TempFile("", "pxeserver-qcow")
+	if err != nil {
+		return nil, -1, err
+	}
+	_, err = io.Copy(inputFile, qcowReader)
+	if err != nil {
+		return nil, -1, err
+	}
+	err = qcowReader.Close()
+	if err != nil {
+		return nil, -1, err
+	}
+	err = inputFile.Close()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	outputFile, err := ioutil.TempFile("", "pxeserver-raw")
+	if err != nil {
+		return nil, -1, err
+	}
+	convertCmd := exec.Command("qemu-img", "convert",
+	  "-f", "qcow2", "-O", "raw", inputFile.Name(), outputFile.Name())
+	// TODO: pass in logger
+	convertCmd.Stdout = os.Stderr
+	convertCmd.Stderr = os.Stderr
+	err = convertCmd.Run()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	stat, err := outputFile.Stat()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return readCloserWithDelete{
+		file: outputFile,
+	}, stat.Size(), nil
 }

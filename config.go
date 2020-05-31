@@ -42,6 +42,10 @@ type File struct {
 	ID       string
 	Template bool
 	Vars     map[string]interface{}
+	ImageConvert ImageConvert `json:"image_convert"`
+}
+type ImageConvert struct {
+	InputFormat string `json:"input_format"`
 }
 
 func LoadConfig(configReader io.Reader) (Config, error) {
