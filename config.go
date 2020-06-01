@@ -43,6 +43,7 @@ type File struct {
 	Template bool
 	Vars     map[string]interface{}
 	ImageConvert ImageConvert `json:"image_convert"`
+	Gzip     bool
 }
 type ImageConvert struct {
 	InputFormat string `json:"input_format"`

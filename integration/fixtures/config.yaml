@@ -12,10 +12,10 @@ hosts:
     path: fixtures/network-config
   - id: cloud_init_userdata
     path: fixtures/user-data
-    # TODO: gzip before sending
   - id: test_image
     url: https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
     sha256: 334167f7b4ad1c5b760cc5925a3d5ed8ffd4d2adb4353cd1f63d1ac298af7bfc
+    gzip: true
     image_convert:
       input_format: qcow2
   boot_args:
@@ -31,6 +31,7 @@ hosts:
         dest: /root/var/lib/cloud/seed/nocloud/user-data
       disks:
       - url: '{{ file_url "test_image" }}'
+        gzip: true
         dest_device: /dev/sda
         mounts:
         - partition: /dev/sda1

@@ -2,6 +2,7 @@ package pxeserver
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"crypto/sha256"
 	"os/exec"
@@ -91,9 +92,13 @@ func (f Files) Read(id string) (io.ReadCloser, int64, error) {
 	}
 
 	if file.ImageConvert.InputFormat != "" {
-		return f.convertQcowToRaw(fileReader)
+		fileReader, fileSize, fileErr = f.convertQcowToRaw(fileReader)
 	}
-	return fileReader, fileSize, nil
+
+	if file.Gzip {
+		return f.gzip(fileReader)
+	}
+	return fileReader, fileSize, fileErr
 }
 
 func (f Files) readLocalFile(file File) (io.ReadCloser, int64, error) {
@@ -227,6 +232,39 @@ func (f Files) convertQcowToRaw(qcowReader io.ReadCloser) (io.ReadCloser, int64,
 	convertCmd.Stdout = os.Stderr
 	convertCmd.Stderr = os.Stderr
 	err = convertCmd.Run()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	stat, err := outputFile.Stat()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return readCloserWithDelete{
+		file: outputFile,
+	}, stat.Size(), nil
+}
+
+func (f Files) gzip(inputReader io.ReadCloser) (io.ReadCloser, int64, error) {
+	defer inputReader.Close()
+
+	outputFile, err := ioutil.TempFile("", "pxeserver-gzip")
+	if err != nil {
+		return nil, -1, err
+	}
+
+	gzipWriter := gzip.NewWriter(outputFile)
+
+	_, err = io.Copy(gzipWriter, inputReader)
+	if err != nil {
+		return nil, -1, err
+	}
+	err = gzipWriter.Close()
+	if err != nil {
+		return nil, -1, err
+	}
+	_, err = outputFile.Seek(0, 0)
 	if err != nil {
 		return nil, -1, err
 	}
