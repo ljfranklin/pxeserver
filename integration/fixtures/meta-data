@@ -2,4 +2,4 @@
 # vim: syntax=yaml
 # dummy nocloud metadata
 instance-id: iid-nocloud
-local-hostname: boot-test
+local-hostname: {{ .vars.cloud_init.hostname }}

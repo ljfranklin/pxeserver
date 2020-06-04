@@ -1,26 +1,30 @@
 #cloud-config
 # vim: syntax=yaml
 #
+{{ $vars := .vars.cloud_init }}
 
-fqdn: boot-test.localdomain
+fqdn: {{ $vars.hostname }}.localdomain
 manage_etc_hosts: true
 
 users:
-  - name: boot-test
-    plain_text_passwd: boot-test
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /bin/bash
-    home: /home/boot-test
-    gecos: Boot
-    groups: [adm, audio, cdrom, dialout, floppy, video, plugdev, dip, netdev]
-    lock_passwd: false
-    # TODO: read secrets from var
-    ssh_authorized_keys:
-    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDYrHIwKxzysVWg4eEac1pYHW5BXrY0cqpmaCaa2rDsfwV4jM0X1TP8Q5cN3nLcTnhXu+Q2ptJ4l3oRbY8wjdnZkoO5Jp2iZK7kfxmyV8F2g2OMC9+5RJPPWcBbnHNapDct7JG3s115FIZpain3Sl1jh75UG7J7VnLyvs5RjdwuG78g7ZhmOUGZ6PZWpi9U5E6TdBoE9WOqUWoWydfxnJ2z2qm22CmOXLr64jMh9c+ez3aijdv6yXKMeSiqvEo/W2vJqiZDi58l+/YGHovHRO4BllgCw0nh6kzdVd+WE9Nm0sIIqBJLcXh6Q+/cdIZc4H7FdI7PmSt47aqNJKoS+cCDe2zUazknhRkh+VrJhm9DRS2bUDWtjph2KMuUPsfemWPxBP808QUxUnHn7/LFkUnC9E6too5UjC+5VGwfzxhKqWqVWRsqSszO5YpZhzVrKD4OlWzYWYr9QBL0qMB6BfwlJL/AoKhLcEzfkLEIu0SgS4zHr+LI2v0pxhb1/8kX/MVuKsx7UKrHPcHtdBKZ8U0rpm9Weg/bbu7d0LjpO4DKLkhaGlONTxenW0TOcnt9IRE2MgG2/IXH1kgdv8FWyvwJQY1/HMv1ZjC6m79Qisb0rt7zGQXqAmFnHzDzg33GBmlC8dL7atfoj+IKQ/MiwWl9/7oZ/AML3oVOLI1PuYZxfw== test
+{{ range $vars.users }}
+- name: {{ .name }}
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  shell: /bin/bash
+  home: /home/{{ .name }}
+  groups: [adm, audio, cdrom, dialout, floppy, video, plugdev, dip, netdev]
+  lock_passwd: false
+  ssh_authorized_keys:
+  {{ range .authorized_keys }}
+  - {{ . }}
+  {{ end }}
+{{ end }}
 
 locale: "en_US.UTF-8"
 
 package_upgrade: false
 
 packages:
-  - openssh-server
+{{ range $vars.packages }}
+- {{ . }}
+{{ end }}
