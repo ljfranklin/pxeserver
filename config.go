@@ -6,13 +6,16 @@ import (
 	"io/ioutil"
 	"strings"
 
+	// This yaml library outputs maps with string keys for better
+	// interoperability with template funcs like 'toJson'
 	"github.com/ghodss/yaml"
 	"github.com/imdario/mergo"
 )
 
 type Config struct {
-	macToFiles map[string][]File
-	macToVars map[string]map[string]interface{}
+	macToFiles      map[string][]File
+	macToVars       map[string]map[string]interface{}
+	macToSecrets    map[string][]SecretDef
 	pixiecoreConfig Pixiecore
 }
 
@@ -34,16 +37,18 @@ type Host struct {
 	Files    []File
 	BootArgs []string `json:"boot_args"`
 	Vars     map[string]interface{}
+	Secrets  []SecretDef
 }
 type File struct {
-	Path     string
-	URL      string
-	SHA256   string
-	ID       string
-	Template bool
-	Vars     map[string]interface{}
+	Mac          string
+	Path         string
+	URL          string
+	SHA256       string
+	ID           string
+	Template     bool
+	Vars         map[string]interface{}
 	ImageConvert ImageConvert `json:"image_convert"`
-	Gzip     bool
+	Gzip         bool
 }
 type ImageConvert struct {
 	InputFormat string `json:"input_format"`
@@ -52,8 +57,9 @@ type ImageConvert struct {
 func LoadConfig(configReader io.Reader) (Config, error) {
 	c := Config{
 		pixiecoreConfig: Pixiecore{},
-		macToFiles: make(map[string][]File),
-		macToVars: make(map[string]map[string]interface{}),
+		macToFiles:      make(map[string][]File),
+		macToVars:       make(map[string]map[string]interface{}),
+		macToSecrets:    make(map[string][]SecretDef),
 	}
 
 	input := ServerConfig{}
@@ -69,12 +75,14 @@ func LoadConfig(configReader io.Reader) (Config, error) {
 		machine := MachineConfig{}
 
 		host.Kernel.ID = fmt.Sprintf("%s-__kernel__", host.Mac)
- 		c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], host.Kernel)
+		host.Kernel.Mac = host.Mac
+		c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], host.Kernel)
 		machine.Kernel = host.Kernel.ID
 
 		for i, f := range host.Initrds {
 			f.ID = fmt.Sprintf("%s-__initrd%d__", host.Mac, i)
- 		  c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], f)
+			f.Mac = host.Mac
+			c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], f)
 			machine.Initrd = append(machine.Initrd, f.ID)
 		}
 
@@ -83,6 +91,7 @@ func LoadConfig(configReader io.Reader) (Config, error) {
 		}
 
 		c.macToVars[host.Mac] = host.Vars
+		c.macToSecrets[host.Mac] = host.Secrets
 
 		for _, f := range host.Files {
 			if len(f.Vars) > 0 && !f.Template {
@@ -93,7 +102,8 @@ func LoadConfig(configReader io.Reader) (Config, error) {
 				return Config{}, err
 			}
 			f.ID = fmt.Sprintf("%s-%s", host.Mac, f.ID)
- 		  c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], f)
+			f.Mac = host.Mac
+			c.macToFiles[host.Mac] = append(c.macToFiles[host.Mac], f)
 		}
 
 		machine.Cmdline = strings.Join(host.BootArgs, " ")
@@ -114,6 +124,10 @@ func (c *Config) Files() []File {
 		allFiles = append(allFiles, filesForHost...)
 	}
 	return allFiles
+}
+
+func (c *Config) SecretDefs() map[string][]SecretDef {
+	return c.macToSecrets
 }
 
 func (c *Config) VarsForHost(mac string) (map[string]interface{}, error) {

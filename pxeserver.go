@@ -9,10 +9,11 @@ import (
 )
 
 type Server struct {
-	Config     io.Reader
-  Address    string
-  LogFunc    func(subsys, msg string)
-  DHCPNoBind bool
+	Config      io.Reader
+	Address     string
+	LogFunc     func(subsys, msg string)
+	DHCPNoBind  bool
+	SecretsPath string
 }
 
 func (s Server) Serve() error {
@@ -27,7 +28,16 @@ func (s Server) Serve() error {
 	if err != nil {
 		return err
 	}
-	renderer := Renderer{}
+	var secrets Secrets
+	if s.SecretsPath != "" {
+		secrets, err = LoadLocalSecrets(s.SecretsPath, cfg.SecretDefs())
+		if err != nil {
+			return err
+		}
+	}
+	renderer := Renderer{
+		Secrets: secrets,
+	}
 	files, err := LoadFiles(cfg.Files(), renderer)
 	if err != nil {
 		return err
@@ -39,11 +49,11 @@ func (s Server) Serve() error {
 			return "", err
 		}
 		return renderer.RenderCmdline(RenderCmdlineArgs{
-			Template: tpl,
-			Mac: mac,
-			Vars: vars,
+			Template:   tpl,
+			Mac:        mac,
+			Vars:       vars,
 			ExtraFuncs: funcs,
-			Files: files,
+			Files:      files,
 		})
 	}
 

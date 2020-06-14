@@ -49,24 +49,24 @@ func TestFilesConfig(t *testing.T) {
 
 	kernel := actual[0]
 	assert.Contains(kernel.ID, mac)
-  assert.Contains(kernel.Path, "fixtures/x86_64/bzImage")
+	assert.Contains(kernel.Path, "fixtures/x86_64/bzImage")
 	assert.False(kernel.Template)
 	assert.Nil(kernel.Vars)
 
 	initrd := actual[1]
 	assert.Contains(initrd.ID, mac)
-  assert.Contains(initrd.Path, "fixtures/x86_64/netboot.cpio")
+	assert.Contains(initrd.Path, "fixtures/x86_64/netboot.cpio")
 	assert.False(initrd.Template)
 	assert.Nil(initrd.Vars)
 
 	templateFile := actual[2]
 	assert.Contains(templateFile.ID, mac)
-  assert.Contains(templateFile.Path, "fixtures/vars.json")
+	assert.Contains(templateFile.Path, "fixtures/vars.json")
 	assert.True(templateFile.Template)
 	assert.Equal(map[string]interface{}{
-    "global_var": "global_value",
-    "host_var": "host_value",
-    "default_var": "default_value",
+		"global_var":  "global_value",
+		"host_var":    "host_value",
+		"default_var": "default_value",
 	}, templateFile.Vars)
 }
 
@@ -84,8 +84,33 @@ func TestVarsForHost(t *testing.T) {
 	assert.NoError(err)
 
 	assert.Equal(map[string]interface{}{
-    "global_var": "global_value",
-    "host_var": "host_value",
+		"global_var": "global_value",
+		"host_var":   "host_value",
+	}, actual)
+}
+
+func TestSecretDefs(t *testing.T) {
+	assert := assert.New(t)
+
+	inputFile, err := os.Open(path.Join(fixturesDir(), "config", "secrets.yaml"))
+	assert.NoError(err)
+	defer inputFile.Close()
+
+	cfg, err := pxeserver.LoadConfig(inputFile)
+	assert.NoError(err)
+
+	actual := cfg.SecretDefs()
+	assert.Equal(map[string][]pxeserver.SecretDef{
+		"52:54:00:12:34:56": []pxeserver.SecretDef{
+			{
+				ID:   "/some_namespace/some_password",
+				Type: "password",
+				Opts: map[string]interface{}{
+					// TODO: YAMLtoJSON step turns ints to floats
+					"length": 123.0,
+				},
+			},
+		},
 	}, actual)
 }
 
@@ -133,7 +158,8 @@ func TestErrorOnMissingHost(t *testing.T) {
 	assert.Contains(err.Error(), "some-missing-host")
 }
 
-type badReader struct {}
+type badReader struct{}
+
 func (b badReader) Read(p []byte) (int, error) {
 	return 0, errors.New("some-error")
 }

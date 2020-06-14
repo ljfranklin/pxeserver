@@ -3,9 +3,9 @@ package pxeserver_test
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"io/ioutil"
 	"path"
 	"testing"
 
@@ -17,13 +17,14 @@ import (
 type MockRenderer struct {
 	mock.Mock
 }
+
 func (m *MockRenderer) RenderFile(f pxeserver.RenderFileArgs) (string, error) {
-  args := m.Called(f)
-  return args.String(0), args.Error(1)
+	args := m.Called(f)
+	return args.String(0), args.Error(1)
 }
 func (m *MockRenderer) RenderPath(s string) (string, error) {
-  args := m.Called(s)
-  return args.String(0), args.Error(1)
+	args := m.Called(s)
+	return args.String(0), args.Error(1)
 }
 
 func TestSimpleRead(t *testing.T) {
@@ -52,7 +53,7 @@ func TestSimpleRead(t *testing.T) {
 	assert.Equal([]byte("some-text\n"), fileContents)
 	assert.Equal(int64(len("some-text\n")), fileSize)
 
-  mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
+	mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
 }
 
 func TestVarsRead(t *testing.T) {
@@ -75,7 +76,7 @@ func TestVarsRead(t *testing.T) {
 			ID:       "some-id",
 			Path:     fixturePath,
 			Template: true,
-			Vars:     map[string]interface{}{
+			Vars: map[string]interface{}{
 				"some_var": "some-templated-text",
 			},
 		},
@@ -147,7 +148,7 @@ func TestRemoteRead(t *testing.T) {
 	assert.Equal([]byte("some-text\n"), fileContents)
 	assert.Equal(int64(len("some-text\n")), fileSize)
 
-  mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
+	mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
 }
 
 func TestErrorOnRemoteReadWithBadChecksum(t *testing.T) {
@@ -162,8 +163,8 @@ func TestErrorOnRemoteReadWithBadChecksum(t *testing.T) {
 
 	f, err := pxeserver.LoadFiles([]pxeserver.File{
 		{
-			ID:  "some-id",
-			URL: fmt.Sprintf("%s/files/simple.txt", assetsServer.URL),
+			ID:     "some-id",
+			URL:    fmt.Sprintf("%s/files/simple.txt", assetsServer.URL),
 			SHA256: "1234",
 		},
 	}, mockRenderer)
@@ -222,7 +223,7 @@ func TestReadErrorOnRendererFailure(t *testing.T) {
 			ID:       "some-id",
 			Path:     fixturePath,
 			Template: true,
-			Vars:     map[string]interface{}{
+			Vars: map[string]interface{}{
 				"some_var": "some-templated-text",
 			},
 		},
@@ -255,7 +256,7 @@ func TestSimpleSHA256(t *testing.T) {
 
 	assert.Equal("58bfb70f49051a0b9c616ee59e5c979d7e704b822a18f84743703b14156548a9", fileSHA)
 
-  mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
+	mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
 }
 
 func TestVarsSHA256(t *testing.T) {
@@ -278,7 +279,7 @@ func TestVarsSHA256(t *testing.T) {
 			ID:       "some-id",
 			Path:     fixturePath,
 			Template: true,
-			Vars:     map[string]interface{}{
+			Vars: map[string]interface{}{
 				"some_var": "some-templated-text",
 			},
 		},
@@ -327,7 +328,7 @@ func TestSimpleMD5(t *testing.T) {
 
 	assert.Equal("e8f7eead7f5f754d970b4de0afa0cba9", fileMD5)
 
-  mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
+	mockRenderer.AssertNumberOfCalls(t, "RenderFile", 0)
 }
 
 func TestVarsMD5(t *testing.T) {
@@ -350,7 +351,7 @@ func TestVarsMD5(t *testing.T) {
 			ID:       "some-id",
 			Path:     fixturePath,
 			Template: true,
-			Vars:     map[string]interface{}{
+			Vars: map[string]interface{}{
 				"some_var": "some-templated-text",
 			},
 		},

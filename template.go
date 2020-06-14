@@ -3,19 +3,20 @@ package pxeserver
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	// This yaml library outputs maps with string keys for better
-	// interoperability with template funcs like 'toJson'
-	"github.com/ghodss/yaml"
 )
 
-type Renderer struct {}
+type Renderer struct {
+	Secrets Secrets
+}
 
 type RenderFileArgs struct {
+	Mac      string
 	Template string
-	Vars map[string]interface{}
+	Vars     map[string]interface{}
 }
 
 func (r Renderer) RenderFile(args RenderFileArgs) (string, error) {
@@ -30,10 +31,14 @@ func (r Renderer) RenderFile(args RenderFileArgs) (string, error) {
 	getFileMD5 := func(id string) (string, error) {
 		return noopValue, nil
 	}
+	getSecret := func(id string) (interface{}, error) {
+		return r.Secrets.GetOrGenerate(args.Mac, id)
+	}
 	templateFuncs := template.FuncMap{
 		"file_url":    getFileURL,
 		"file_sha256": getFileSHA256,
 		"file_md5":    getFileMD5,
+		"secret":      getSecret,
 	}
 
 	vars, err := r.templateVars(args.Vars, templateFuncs)
@@ -42,7 +47,8 @@ func (r Renderer) RenderFile(args RenderFileArgs) (string, error) {
 	}
 
 	tmpl, err := template.New("file").
-	  Funcs(sprig.TxtFuncMap()).
+		Funcs(templateFuncs).
+		Funcs(sprig.TxtFuncMap()).
 		Option("missingkey=error").
 		Parse(string(args.Template))
 	if err != nil {
@@ -56,16 +62,16 @@ func (r Renderer) RenderFile(args RenderFileArgs) (string, error) {
 }
 
 type fileHelper interface {
-  SHA256(id string) (string, error)
-  MD5(id string) (string, error)
+	SHA256(id string) (string, error)
+	MD5(id string) (string, error)
 }
 
 type RenderCmdlineArgs struct {
-	Template string
-	Mac string
-	Vars map[string]interface{}
+	Template   string
+	Mac        string
+	Vars       map[string]interface{}
 	ExtraFuncs template.FuncMap
-	Files fileHelper
+	Files      fileHelper
 }
 
 func (r Renderer) RenderCmdline(args RenderCmdlineArgs) (string, error) {
@@ -80,10 +86,14 @@ func (r Renderer) RenderCmdline(args RenderCmdlineArgs) (string, error) {
 	getFileMD5 := func(id string) (string, error) {
 		return args.Files.MD5(fmt.Sprintf("%s-%s", args.Mac, id))
 	}
+	getSecret := func(id string) (interface{}, error) {
+		return r.Secrets.GetOrGenerate(args.Mac, id)
+	}
 	templateFuncs := template.FuncMap{
 		"file_url":    getFileURL,
 		"file_sha256": getFileSHA256,
 		"file_md5":    getFileMD5,
+		"secret":      getSecret,
 	}
 
 	vars, err := r.templateVars(args.Vars, templateFuncs)
@@ -92,7 +102,7 @@ func (r Renderer) RenderCmdline(args RenderCmdlineArgs) (string, error) {
 	}
 
 	tmpl, err := template.New("cmdline").
-	  Funcs(templateFuncs).
+		Funcs(templateFuncs).
 		Funcs(sprig.TxtFuncMap()).
 		Option("missingkey=error").
 		Parse(args.Template)
@@ -112,11 +122,11 @@ func (r Renderer) RenderPath(filepath string) (string, error) {
 		return fmt.Sprintf("__builtin__/%s", builtinPath), nil
 	}
 	templateFuncs := template.FuncMap{
-		"builtin":    getBuiltin,
+		"builtin": getBuiltin,
 	}
 
 	tmpl, err := template.New("path").
-	  Funcs(templateFuncs).
+		Funcs(templateFuncs).
 		Option("missingkey=error").
 		Parse(filepath)
 	if err != nil {
@@ -130,24 +140,59 @@ func (r Renderer) RenderPath(filepath string) (string, error) {
 	return templatedPath.String(), nil
 }
 
-func (r Renderer) templateVars(vars map[string]interface{}, funcs template.FuncMap) (map[string]interface{}, error){
-	varsYAML, err := yaml.Marshal(vars)
+func (r Renderer) templateVars(vars map[string]interface{}, funcs template.FuncMap) (map[string]interface{}, error) {
+	result, err := r.templateSingleVar(vars, funcs)
 	if err != nil {
 		return nil, err
 	}
+	return result.(map[string]interface{}), nil
+}
 
-	varsTmpl, err := template.New("vars").Funcs(funcs).Funcs(sprig.TxtFuncMap()).Option("missingkey=error").Parse(string(varsYAML))
+func (r Renderer) templateSingleVar(value interface{}, funcs template.FuncMap) (interface{}, error) {
+	switch v := reflect.ValueOf(value); v.Kind() {
+	case reflect.Map:
+		templatedMap := make(map[string]interface{})
+		mapIter := v.MapRange()
+		for mapIter.Next() {
+			k := mapIter.Key()
+			v := mapIter.Value()
+			templatedKey, err := r.templateString(k.String(), funcs)
+			if err != nil {
+				return nil, err
+			}
+			templatedValue, err := r.templateSingleVar(v.Interface(), funcs)
+			if err != nil {
+				return nil, err
+			}
+			templatedMap[templatedKey] = templatedValue
+		}
+		return templatedMap, nil
+	case reflect.Slice:
+		templatedSlice := make([]interface{}, 0)
+		for i := 0; i < v.Len(); i++ {
+			v := v.Index(i)
+			templatedValue, err := r.templateSingleVar(v.Interface(), funcs)
+			if err != nil {
+				return nil, err
+			}
+			templatedSlice = append(templatedSlice, templatedValue)
+		}
+		return templatedSlice, nil
+	case reflect.String:
+		return r.templateString(v.String(), funcs)
+	default:
+		return value, nil
+	}
+}
+
+func (r Renderer) templateString(s string, funcs template.FuncMap) (string, error) {
+	varsTmpl, err := template.New("vars").Funcs(funcs).Funcs(sprig.TxtFuncMap()).Option("missingkey=error").Parse(s)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	var templatedVars bytes.Buffer
 	if err = varsTmpl.Execute(&templatedVars, nil); err != nil {
-		return nil, err
+		return "", err
 	}
-	var processedVars map[string]interface{}
-	if err = yaml.Unmarshal(templatedVars.Bytes(), &processedVars); err != nil {
-		return nil, err
-	}
-
-	return processedVars, nil
+	return templatedVars.String(), nil
 }

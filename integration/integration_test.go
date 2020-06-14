@@ -40,13 +40,18 @@ func TestIntegrationBoot(t *testing.T) {
 	require.NoError(err)
 
 	configPath := path.Join("fixtures", "config.yaml")
+	secretsPath := path.Join(tmpdir, "secrets.yaml")
 
 	diskPath := path.Join(tmpdir, "disk.img")
 	err = createEmptyDiskImage(diskPath, &logger)
 	require.NoError(err)
 
 	pxeCxt, pxeCancel := context.WithCancel(context.Background())
-	pxeCmd := exec.CommandContext(pxeCxt, binaryPath, "boot", fmt.Sprintf("--config=%s", configPath))
+	pxeCmd := exec.CommandContext(pxeCxt, binaryPath,
+		"boot",
+		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--secrets=%s", secretsPath),
+	)
 	pxeCmd.Stdout = &logger
 	pxeCmd.Stderr = &logger
 	err = pxeCmd.Start()
@@ -65,6 +70,21 @@ func TestIntegrationBoot(t *testing.T) {
 	pxeCancel()
 	_ = pxeCmd.Wait()
 
+	// TODO: can flag format be simplified?
+	pxeCmd = exec.Command(binaryPath,
+		"secrets",
+		fmt.Sprintf("--secrets=%s", secretsPath),
+		"--host=52:54:00:12:34:56",
+		"--id=/cloud_init/users/boot-test/ssh_key",
+		"--field=private_key",
+	)
+	sshKey, err := pxeCmd.Output()
+	if !assert.NoError(err) {
+		require.FailNow(string(err.(*exec.ExitError).Stderr))
+	}
+	signer, err := ssh.ParsePrivateKey(sshKey)
+	require.NoError(err)
+
 	t.Log("Starting QEMU with disk boot, view output with 'vncviewer -Shared localhost:5910'...")
 	qemuDiskBootCxt, qemuDiskBootCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer qemuDiskBootCancel()
@@ -74,18 +94,13 @@ func TestIntegrationBoot(t *testing.T) {
 	err = qemuDiskBootCmd.Start()
 	assert.NoError(err)
 
-	sshKey, err := ioutil.ReadFile(path.Join(testDir(), "fixtures", "test.pem"))
-	require.NoError(err)
-	signer, err := ssh.ParsePrivateKey(sshKey)
-	require.NoError(err)
-
 	config := &ssh.ClientConfig{
 		User: "boot-test",
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout: 5 * time.Minute,
+		Timeout:         5 * time.Minute,
 	}
 
 	t.Log("Attempting to open SSH connection...")
@@ -97,7 +112,7 @@ func TestIntegrationBoot(t *testing.T) {
 			break
 		}
 		t.Logf("Got ssh error '%s', retrying...", sshErr.Error())
-		time.Sleep(10*time.Second)
+		time.Sleep(10 * time.Second)
 	}
 	require.NoError(sshErr)
 

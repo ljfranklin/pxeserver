@@ -5,12 +5,12 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"crypto/sha256"
-	"os/exec"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -21,14 +21,14 @@ type Files struct {
 }
 
 type renderer interface {
-  RenderFile(RenderFileArgs) (string, error)
-  RenderPath(string) (string, error)
+	RenderFile(RenderFileArgs) (string, error)
+	RenderPath(string) (string, error)
 }
 
 func LoadFiles(files []File, renderer renderer) (Files, error) {
 	f := Files{
 		availableFiles: make(map[string]File),
-		renderer: renderer,
+		renderer:       renderer,
 	}
 	for _, cfgFile := range files {
 		var err error
@@ -121,8 +121,9 @@ func (f Files) readLocalFile(file File) (io.ReadCloser, int64, error) {
 	inputFile.Close()
 
 	rendererContent, err := f.renderer.RenderFile(RenderFileArgs{
+		Mac:      file.Mac,
 		Template: string(templateContent),
-		Vars: file.Vars,
+		Vars:     file.Vars,
 	})
 	if err != nil {
 		return nil, -1, err
@@ -134,6 +135,7 @@ func (f Files) readLocalFile(file File) (io.ReadCloser, int64, error) {
 type readCloserWithDelete struct {
 	file *os.File
 }
+
 func (r readCloserWithDelete) Read(p []byte) (int, error) {
 	return r.file.Read(p)
 }
@@ -227,7 +229,7 @@ func (f Files) convertQcowToRaw(qcowReader io.ReadCloser) (io.ReadCloser, int64,
 		return nil, -1, err
 	}
 	convertCmd := exec.Command("qemu-img", "convert",
-	  "-f", "qcow2", "-O", "raw", inputFile.Name(), outputFile.Name())
+		"-f", "qcow2", "-O", "raw", inputFile.Name(), outputFile.Name())
 	// TODO: pass in logger
 	convertCmd.Stdout = os.Stderr
 	convertCmd.Stderr = os.Stderr

@@ -14,4 +14,5 @@ require (
 	github.com/stretchr/testify v1.5.1
 	go.universe.tf/netboot v0.0.0-20200205210610-68743c67a60c
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904
+	gopkg.in/yaml.v2 v2.2.8
 )

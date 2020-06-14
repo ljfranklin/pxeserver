@@ -15,21 +15,23 @@ hosts:
     path: fixtures/user-data
     template: true
   - id: test_image
-    url: https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img
-    sha256: 334167f7b4ad1c5b760cc5925a3d5ed8ffd4d2adb4353cd1f63d1ac298af7bfc
+    url: https://cloud-images.ubuntu.com/bionic/20200605/bionic-server-cloudimg-amd64.img
+    sha256: 9f65c3a8d15d5e5a74e593e2f8e09b88c89ec470c0a95772956b525cff371e6e
     gzip: true
     image_convert:
       input_format: qcow2
   boot_args:
   - "netboot_installer={{ .vars.installer | toRawJson | b64enc }}"
+  secrets:
+  - id: /cloud_init/users/boot-test/ssh_key
+    type: ssh_key
   vars:
     cloud_init:
       hostname: boot-test
       users:
       - name: boot-test
-        # TODO: read secrets from files
         authorized_keys:
-        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDYrHIwKxzysVWg4eEac1pYHW5BXrY0cqpmaCaa2rDsfwV4jM0X1TP8Q5cN3nLcTnhXu+Q2ptJ4l3oRbY8wjdnZkoO5Jp2iZK7kfxmyV8F2g2OMC9+5RJPPWcBbnHNapDct7JG3s115FIZpain3Sl1jh75UG7J7VnLyvs5RjdwuG78g7ZhmOUGZ6PZWpi9U5E6TdBoE9WOqUWoWydfxnJ2z2qm22CmOXLr64jMh9c+ez3aijdv6yXKMeSiqvEo/W2vJqiZDi58l+/YGHovHRO4BllgCw0nh6kzdVd+WE9Nm0sIIqBJLcXh6Q+/cdIZc4H7FdI7PmSt47aqNJKoS+cCDe2zUazknhRkh+VrJhm9DRS2bUDWtjph2KMuUPsfemWPxBP808QUxUnHn7/LFkUnC9E6too5UjC+5VGwfzxhKqWqVWRsqSszO5YpZhzVrKD4OlWzYWYr9QBL0qMB6BfwlJL/AoKhLcEzfkLEIu0SgS4zHr+LI2v0pxhb1/8kX/MVuKsx7UKrHPcHtdBKZ8U0rpm9Weg/bbu7d0LjpO4DKLkhaGlONTxenW0TOcnt9IRE2MgG2/IXH1kgdv8FWyvwJQY1/HMv1ZjC6m79Qisb0rt7zGQXqAmFnHzDzg33GBmlC8dL7atfoj+IKQ/MiwWl9/7oZ/AML3oVOLI1PuYZxfw== test
+        - '{{ (secret "/cloud_init/users/boot-test/ssh_key").public_key }}'
       packages:
       - openssh-server
     installer:
