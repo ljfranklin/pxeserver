@@ -1,0 +1,25 @@
+ARG ARCH=
+FROM ${ARCH}/ubuntu:focal
+
+ADD debian/ /working/debian
+WORKDIR /working
+
+# fakeroot-tcp avoids "semop(1): encountered an error: Function not implemented" on arm64:
+# https://github.com/varnishcache/varnish-cache/commit/8b4021956aefee46e42ca5170bd213314e5d8b55
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    debhelper \
+    devscripts \
+    dput \
+    equivs \
+    fakeroot \
+    git \
+    rsync \
+    wget \
+  && update-alternatives --set fakeroot /usr/bin/fakeroot-tcp \
+  && mk-build-deps --install --remove -t "apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends -y" \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/bin/bash"]

@@ -32,7 +32,7 @@ func TestIntegrationBoot(t *testing.T) {
 
 	logger := logWriter{t: t}
 
-	binaryPath, err := gexec.Build("github.com/ljfranklin/pxeserver/cli")
+	binaryPath, err := gexec.Build("github.com/ljfranklin/pxeserver/cli/pxeserver")
 	require.NoError(err)
 	defer gexec.CleanupBuildArtifacts()
 

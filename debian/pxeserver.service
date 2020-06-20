@@ -1,0 +1,12 @@
+[Unit]
+Description=PXE server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/pxeserver
+ExecStart=/usr/bin/pxeserver boot --config=config.yaml --secrets=secrets.yaml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

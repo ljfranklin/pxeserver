@@ -1,0 +1,24 @@
+pxeserver (0.0.1+nmu3) focal; urgency=medium
+
+  * Make build internetless by vendoring packages prior to build
+
+ -- Lyle Franklin <lylejfranklin@gmail.com>  Tue, 23 Jun 2020 21:01:48 -0400
+
+pxeserver (0.0.1+nmu2) focal; urgency=medium
+
+  * Attempt to fix launchpad error:
+    go: github.com/Debian/dh-make-golang@v0.3.3: reading github.com/Debian/dh-make-golang/go.mod at revision v0.3.3: unknown revision v0.3.3
+
+ -- Lyle Franklin <lylejfranklin@gmail.com>  Tue, 23 Jun 2020 07:52:44 -0400
+
+pxeserver (0.0.1+nmu1) focal; urgency=medium
+
+  * Add debian packaging
+
+ -- Lyle Franklin <lylejfranklin@gmail.com>  Tue, 23 Jun 2020 07:05:40 -0400
+
+pxeserver (0.0.1) focal; urgency=medium
+
+  * Initial release (Closes: TODO)
+
+ -- Lyle Franklin <lylejfranklin@gmail.com>  Thu, 18 Jun 2020 08:30:40 -0400

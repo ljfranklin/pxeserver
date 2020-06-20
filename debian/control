@@ -1,0 +1,35 @@
+Source: pxeserver
+Maintainer: Lyle Franklin <lylejfranklin@gmail.com>
+Section: devel
+Testsuite: autopkgtest-pkg-go
+Priority: optional
+Build-Depends: debhelper-compat (= 12),
+               dh-golang,
+               git,
+               golang-any,
+               golang-github-ghodss-yaml-dev,
+               golang-github-imdario-mergo-dev,
+               golang-github-spf13-cobra-dev,
+               golang-github-stretchr-testify-dev,
+               golang-golang-x-crypto-dev,
+               golang-gomega-dev,
+               golang-yaml.v2-dev
+Standards-Version: 4.5.0
+Homepage: https://github.com/ljfranklin/pxeserver
+Rules-Requires-Root: no
+XS-Go-Import-Path: github.com/ljfranklin/pxeserver
+
+Package: pxeserver
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
+Built-Using: ${misc:Built-Using}
+Description: A server to manage network booting (program)
+ PXEServer A server to manage network booting of machines via PXE
+ (https://en.wikipedia.org/wiki/Preboot_Execution_Environment).
+ Built on the fantastic Pixiecore
+ (https://github.com/danderson/netboot/blob/master/pixiecore/README.md)
+ project with added features such as file templating and writing raw
+ images to disk over the network.
+ .
+ WORK IN PROGRESS

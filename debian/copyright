@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: pxeserver
+Upstream-Contact: lylejfranklin@gmail.com
+Source: https://github.com/ljfranklin/pxeserver
+
+Files: *
+Copyright: 2020 Lyle Franklin
+License: GPLv2

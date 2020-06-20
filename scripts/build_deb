@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+original_project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+
+: "${UPLOAD_DEB:=false}"
+if [ "${UPLOAD_DEB}" = "true" ]; then
+: "${PPA_NAME:?}"
+: "${PPA_GPG_KEY_ID:?}"
+: "${PPA_GPG_SECRET_FILE:=/gpg.secret}"
+fi
+
+tmpdir="$(mktemp -d /tmp/pxeserver.XXXXX)"
+trap '{ rm -rf ${tmpdir}; }' EXIT
+
+build_dir="${tmpdir}/build"
+mkdir "${build_dir}"
+pushd "${build_dir}" > /dev/null
+  rsync -l -r --delete --exclude .git "${original_project_dir}/" .
+
+  deb_version="$(head -n1 "debian/changelog" | grep -oP '\d+\.\d+\.\d+[^)]*')"
+
+  go mod vendor
+
+  tar czvf "${tmpdir}/pxeserver_${deb_version}.orig.tar.gz" --exclude 'debian/' \
+    --exclude '.git' .
+
+  if [ "${UPLOAD_DEB}" = "true" ]; then
+    gpg --import "${PPA_GPG_SECRET_FILE}"
+    debuild --no-lintian "-k${PPA_GPG_KEY_ID}" -S
+    dput "ppa:${PPA_NAME}" "${tmpdir}/pxeserver_${deb_version}_source.changes"
+  else
+    debuild -us -uc -b
+    cp ../*.deb "${original_project_dir}/output/"
+  fi
+popd > /dev/null

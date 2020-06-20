@@ -5,6 +5,7 @@ go 1.14
 replace go.universe.tf/netboot => github.com/ljfranklin/netboot v0.0.0-20200516152747-38439748f4c6
 
 require (
+	github.com/Debian/dh-make-golang v0.3.3 // indirect
 	github.com/Masterminds/sprig/v3 v3.1.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/imdario/mergo v0.3.9

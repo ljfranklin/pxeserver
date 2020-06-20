@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+
+pushd "${project_dir}" > /dev/null
+  docker build -t ljfranklin/pxeserver:test -f docker/Dockerfile.test .
+  docker push ljfranklin/pxeserver:test
+
+  docker build -t ljfranklin/pxeserver:deb-amd64 -f docker/Dockerfile.deb --build-arg ARCH=amd64 .
+  docker push ljfranklin/pxeserver:deb-amd64
+  docker build -t ljfranklin/pxeserver:deb-arm64v8 -f docker/Dockerfile.deb --build-arg ARCH=arm64v8 .
+  docker push ljfranklin/pxeserver:deb-arm64v8
+  docker manifest create ljfranklin/pxeserver:deb \
+    --amend ljfranklin/pxeserver:deb-amd64 \
+    --amend ljfranklin/pxeserver:deb-arm64v8
+  docker push ljfranklin/pxeserver:deb
+popd > /dev/null
