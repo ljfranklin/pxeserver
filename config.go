@@ -29,15 +29,17 @@ type MachineConfig struct {
 	Kernel  string
 	Initrd  []string
 	Cmdline string
+	ForcePXELinux bool
 }
 type Host struct {
-	Mac      string
-	Kernel   File
-	Initrds  []File
-	Files    []File
-	BootArgs []string `json:"boot_args"`
-	Vars     map[string]interface{}
-	Secrets  []SecretDef
+	Mac           string
+	Kernel        File
+	Initrds       []File
+	Files         []File
+	BootArgs      []string `json:"boot_args"`
+	Vars          map[string]interface{}
+	Secrets       []SecretDef
+	ForcePXELinux bool `json:"force_pxe_linux"`
 }
 type File struct {
 	Mac          string
@@ -107,6 +109,7 @@ func LoadConfig(configReader io.Reader) (Config, error) {
 		}
 
 		machine.Cmdline = strings.Join(host.BootArgs, " ")
+		machine.ForcePXELinux = host.ForcePXELinux
 
 		c.pixiecoreConfig[MacAddress(host.Mac)] = machine
 	}

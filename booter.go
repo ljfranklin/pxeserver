@@ -25,8 +25,8 @@ func ConfigBooter(cfg Pixiecore, files Files) (pixiecore.Booter, error) {
 		for _, initrd := range hostCfg.Initrd {
 			spec.Initrd = append(spec.Initrd, pixiecore.ID(initrd))
 		}
-
 		spec.Cmdline = hostCfg.Cmdline
+		spec.ForcePXELinux = hostCfg.ForcePXELinux
 
 		ret.specs[string(mac)] = spec
 	}
