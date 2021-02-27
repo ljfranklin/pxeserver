@@ -15,8 +15,8 @@ hosts:
     path: fixtures/user-data
     template: true
   - id: test_image
-    url: https://cloud-images.ubuntu.com/bionic/20200605/bionic-server-cloudimg-amd64.img
-    sha256: 9f65c3a8d15d5e5a74e593e2f8e09b88c89ec470c0a95772956b525cff371e6e
+    url: https://cloud-images.ubuntu.com/releases/bionic/release-20210224/ubuntu-18.04-server-cloudimg-amd64.img
+    sha256: 986e137a69d8ec759752750454f19bc12441d1be71c042aa2305ec5d2e6dd884
     gzip: true
     image_convert:
       input_format: qcow2
