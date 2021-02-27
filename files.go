@@ -198,7 +198,7 @@ func (f Files) readRemoteFile(file File) (io.ReadCloser, int64, error) {
 
 func (f Files) readBuiltinFile(file File) (io.ReadCloser, int64, error) {
 	builtinPath := strings.Replace(file.Path, "__builtin__", "bindeps", 1)
-	data, err := Asset(builtinPath)
+	data, err := readAsset(builtinPath)
 	if err != nil {
 		return nil, -1, err
 	}

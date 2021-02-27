@@ -19,10 +19,25 @@ type Server struct {
 func (s Server) Serve() error {
 	// TODO: ipxe flags
 	firmware := make(map[pixiecore.Firmware][]byte)
-	firmware[pixiecore.FirmwareEFI64] = MustAsset("bindeps/ipxe/x86_64/ipxe.efi")
-	firmware[pixiecore.FirmwareEFIBC] = MustAsset("bindeps/ipxe/x86_64/ipxe.efi")
+	var err error
+	firmware[pixiecore.FirmwareEFI64], err = readAsset("bindeps/ipxe/x86_64/ipxe.efi")
+	if err != nil {
+		return err
+	}
+	firmware[pixiecore.FirmwareEFIBC], err = readAsset("bindeps/ipxe/x86_64/ipxe.efi")
+	if err != nil {
+		return err
+	}
+	firmware[pixiecore.FirmwareEFIArm64], err = readAsset("bindeps/ipxe/arm64/ipxe.efi")
+	if err != nil {
+		return err
+	}
+	// TODO: compile ARM 32
 	// TODO: compile this
 	firmware[pixiecore.FirmwareX86Ipxe] = ipxe.MustAsset("ipxe.pxe")
+	if err != nil {
+		return err
+	}
 
 	cfg, err := LoadConfig(s.Config)
 	if err != nil {

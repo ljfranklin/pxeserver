@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -eu -o pipefail
+
+: "${IPXE_SHA:=16d95227a4b92bba068b43070545b96ce0a90e14}"
+
+project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+
+tmpdir="$(mktemp -d -p '' pxeserver.XXXXX)"
+trap '{ rm -rf ${tmpdir}; }' EXIT
+#
+# git clone https://github.com/ipxe/ipxe "${tmpdir}/ipxe"
+# pushd "${tmpdir}/ipxe/src" > /dev/null
+#   git reset --hard "${IPXE_SHA}"
+#
+#   wget https://raw.githubusercontent.com/danderson/netboot/bc90686a5279c9f5d712e61b0dfcca69da5f1642/pixiecore/boot.ipxe
+#
+#   mkdir -p "${project_dir}/bindeps/ipxe/x86_64"
+#   make EMBED=boot.ipxe bin-x86_64-efi/ipxe.efi
+#   cp "${tmpdir}/ipxe/src/bin-x86_64-efi/ipxe.efi" "${project_dir}/bindeps/ipxe/x86_64/ipxe.efi"
+#   make clean
+#   mkdir -p "${project_dir}/bindeps/ipxe/arm64"
+#   make EMBED=boot.ipxe CONFIG=rpi CROSS=aarch64-linux-gnu- bin-arm64-efi/rpi.efi
+#   cp "${tmpdir}/ipxe/src/bin-arm64-efi/rpi.efi" "${project_dir}/bindeps/ipxe/arm64/ipxe.efi"
+# popd > /dev/null
+
+git clone --depth 1 https://github.com/ljfranklin/netboot-buildroot "${tmpdir}/netboot-buildroot"
+pushd "${tmpdir}/netboot-buildroot" > /dev/null
+  # TODO: can qemu build boot on real machine?
+  ./build.sh qemu_x86_64_custom_defconfig
+  mkdir -p "${project_dir}/bindeps/installer/x86_64"
+  mv output/bzImage "${project_dir}/bindeps/installer/x86_64/kernel"
+  mv output/rootfs.cpio.gz "${project_dir}/bindeps/installer/x86_64/initrd"
+
+  # TODO: pick better filename
+  ./build.sh raspberrypi3_64_custom_defconfig
+  mkdir -p "${project_dir}/bindeps/installer/arm64"
+  mv output/Image "${project_dir}/bindeps/installer/arm64/kernel"
+  mv output/rootfs.cpio.gz "${project_dir}/bindeps/installer/arm64/initrd"
+popd > /dev/null
