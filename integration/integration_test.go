@@ -46,6 +46,19 @@ func TestIntegrationBoot(t *testing.T) {
 	err = createEmptyDiskImage(diskPath, &logger)
 	require.NoError(err)
 
+	fileCmd := exec.Command(binaryPath,
+		"files",
+		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--secrets=%s", secretsPath),
+		"--host=52:54:00:12:34:56",
+		"--id=cloud_init_metadata",
+	)
+	renderedTemplate, err := fileCmd.Output()
+	if !assert.NoError(err) {
+		require.FailNow(string(err.(*exec.ExitError).Stderr))
+	}
+	assert.Contains(string(renderedTemplate), "boot-test")
+
 	pxeCxt, pxeCancel := context.WithCancel(context.Background())
 	pxeCmd := exec.CommandContext(pxeCxt, binaryPath,
 		"boot",

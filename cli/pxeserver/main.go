@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -43,6 +44,18 @@ func main() {
 			})
 		},
 	}
+	filesCmd := &cobra.Command{
+		Use:   "files",
+		Short: "Print templated files to Stdout",
+		Run: func(cmd *cobra.Command, args []string) {
+			executeFiles(filesArgs{
+				ConfigPath:  cfgFile,
+				SecretsPath: secretsFile,
+				Host:        host,
+				ID:          id,
+			})
+		},
+	}
 	// TODO: document flags
 	bootCmd.Flags().StringVar(&cfgFile, "config", "", "config file")
 	bootCmd.Flags().StringVar(&secretsFile, "secrets", "", "secrets file")
@@ -51,9 +64,14 @@ func main() {
 	secretsCmd.Flags().StringVar(&host, "host", "", "host mac")
 	secretsCmd.Flags().StringVar(&id, "id", "", "secret id")
 	secretsCmd.Flags().StringVar(&field, "field", "", "secret field")
+	filesCmd.Flags().StringVar(&cfgFile, "config", "", "config file")
+	filesCmd.Flags().StringVar(&secretsFile, "secrets", "", "secrets file")
+	filesCmd.Flags().StringVar(&host, "host", "", "host mac")
+	filesCmd.Flags().StringVar(&id, "id", "", "secret id")
 
 	rootCmd.AddCommand(bootCmd)
 	rootCmd.AddCommand(secretsCmd)
+	rootCmd.AddCommand(filesCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
@@ -109,4 +127,47 @@ func executeSecrets(args secretsArgs) {
 		log.Fatal(err)
 	}
 	fmt.Println(result)
+}
+
+type filesArgs struct {
+	ConfigPath  string
+	SecretsPath string
+	Host        string
+	ID          string
+}
+
+func executeFiles(args filesArgs) {
+	configFile, err := os.Open(args.ConfigPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer configFile.Close()
+	cfg, err := pxeserver.LoadConfig(configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	secrets, err := pxeserver.LoadLocalSecrets(args.SecretsPath, cfg.SecretDefs())
+	if err != nil {
+		log.Fatal(err)
+	}
+	renderer := pxeserver.Renderer{
+		Secrets: secrets,
+	}
+	files, err := pxeserver.LoadFiles(cfg.Files(), renderer)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// TODO(ljfranklin): extract into helper
+	namespacedID := fmt.Sprintf("%s-%s", args.Host, args.ID)
+	fileReader, _, err := files.Read(namespacedID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer fileReader.Close()
+
+	_, err = io.Copy(os.Stdout, fileReader)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
