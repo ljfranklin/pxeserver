@@ -34,11 +34,15 @@ func (r Renderer) RenderFile(args RenderFileArgs) (string, error) {
 	getSecret := func(id string) (interface{}, error) {
 		return r.Secrets.GetOrGenerate(args.Mac, id)
 	}
+	getSharedSecret := func(id string) (interface{}, error) {
+		return r.Secrets.GetOrGenerate("", id)
+	}
 	templateFuncs := template.FuncMap{
-		"file_url":    getFileURL,
-		"file_sha256": getFileSHA256,
-		"file_md5":    getFileMD5,
-		"secret":      getSecret,
+		"file_url":      getFileURL,
+		"file_sha256":   getFileSHA256,
+		"file_md5":      getFileMD5,
+		"secret":        getSecret,
+		"shared_secret": getSharedSecret,
 	}
 
 	vars, err := r.templateVars(args.Vars, templateFuncs)
@@ -89,11 +93,15 @@ func (r Renderer) RenderCmdline(args RenderCmdlineArgs) (string, error) {
 	getSecret := func(id string) (interface{}, error) {
 		return r.Secrets.GetOrGenerate(args.Mac, id)
 	}
+	getSharedSecret := func(id string) (interface{}, error) {
+		return r.Secrets.GetOrGenerate("", id)
+	}
 	templateFuncs := template.FuncMap{
-		"file_url":    getFileURL,
-		"file_sha256": getFileSHA256,
-		"file_md5":    getFileMD5,
-		"secret":      getSecret,
+		"file_url":      getFileURL,
+		"file_sha256":   getFileSHA256,
+		"file_md5":      getFileMD5,
+		"secret":        getSecret,
+		"shared_secret": getSharedSecret,
 	}
 
 	vars, err := r.templateVars(args.Vars, templateFuncs)

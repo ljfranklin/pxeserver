@@ -11,6 +11,6 @@ pushd "${project_dir}" > /dev/null
     -w /build \
     -p 127.0.0.1:5910:5910/tcp \
     -e "PXESERVER_TEST_INTEGRATION=true" \
-    -it ljfranklin/pxeserver:integration \
+    -it ljfranklin/pxeserver:test \
     /bin/bash -c "go test -v ./integration"
 popd > /dev/null

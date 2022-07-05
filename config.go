@@ -20,15 +20,16 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Hosts []Host
-	Vars  map[string]interface{}
+	Hosts         []Host
+	Vars          map[string]interface{}
+	SharedSecrets []SecretDef `json:"shared_secrets"`
 }
 type Pixiecore map[MacAddress]MachineConfig
 type MacAddress string
 type MachineConfig struct {
-	Kernel  string
-	Initrd  []string
-	Cmdline string
+	Kernel        string
+	Initrd        []string
+	Cmdline       string
 	ForcePXELinux bool
 }
 type Host struct {
@@ -71,6 +72,9 @@ func LoadConfig(configReader io.Reader) (Config, error) {
 	}
 	if err = yaml.Unmarshal(configContents, &input); err != nil {
 		return Config{}, fmt.Errorf("config file was not valid YAML/JSON: %s", err)
+	}
+	if len(input.SharedSecrets) > 0 {
+		c.macToSecrets[""] = input.SharedSecrets
 	}
 
 	for _, host := range input.Hosts {

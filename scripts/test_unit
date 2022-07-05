@@ -10,6 +10,6 @@ pushd "${project_dir}" > /dev/null
   docker run \
     -v "$PWD:/build" \
     -w /build \
-    -it ljfranklin/pxeserver:integration \
+    -it ljfranklin/pxeserver:test \
     /bin/bash -c "go test -run 'Test[^Integration]'"
 popd > /dev/null

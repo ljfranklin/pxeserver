@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"sync"
 
 	yamlToJson "github.com/ghodss/yaml"
 	"golang.org/x/crypto/ssh"
@@ -34,6 +35,7 @@ type localSecrets struct {
 	storePath     string
 	hostToSecrets map[string]map[string]interface{}
 	hostToDefs    map[string][]SecretDef
+	mu            sync.Mutex
 }
 
 type secretsConfig struct {
@@ -86,23 +88,27 @@ func LoadLocalSecrets(storePath string, hostToDefs map[string][]SecretDef) (Secr
 }
 
 func (s *localSecrets) GetOrGenerate(mac string, id string) (interface{}, error) {
-	// TODO: locking
 	if secret, err := s.Get(mac, id); err == nil {
 		return secret, nil
 	}
 
+	s.mu.Lock()
 	hostDefs, ok := s.hostToDefs[mac]
 	if !ok {
+		s.mu.Unlock()
 		return nil, fmt.Errorf("could not find secret defs for host '%s'", mac)
 	}
 	if err := s.generate(mac, hostDefs); err != nil {
+		s.mu.Unlock()
 		return nil, err
 	}
+	s.mu.Unlock()
 	return s.Get(mac, id)
 }
 
 func (s *localSecrets) Get(mac string, id string) (interface{}, error) {
-	// TODO: locking
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	hostSecrets, ok := s.hostToSecrets[mac]
 	if !ok {
 		return nil, fmt.Errorf("could not find secrets for host '%s'", mac)
@@ -115,7 +121,6 @@ func (s *localSecrets) Get(mac string, id string) (interface{}, error) {
 }
 
 func (s *localSecrets) GetField(mac string, id string, field string) (interface{}, error) {
-	// TODO: locking
 	fullSecret, err := s.Get(mac, id)
 	if err != nil {
 		return nil, err
@@ -127,7 +132,6 @@ func (s *localSecrets) GetField(mac string, id string, field string) (interface{
 }
 
 func (s *localSecrets) generate(mac string, secretDefs []SecretDef) error {
-	// TODO: locking
 	hostSecrets, ok := s.hostToSecrets[mac]
 	if !ok {
 		s.hostToSecrets[mac] = make(map[string]interface{})
@@ -167,12 +171,12 @@ func (s *localSecrets) generate(mac string, secretDefs []SecretDef) error {
 
 func (s *localSecrets) save() error {
 	updatedConfig := secretsConfig{
-		Hosts: make([]hostSecrets, len(s.hostToSecrets)),
+		Hosts: make([]hostSecrets, 0, len(s.hostToSecrets)),
 	}
 	for host, secrets := range s.hostToSecrets {
 		updatedSecrets := hostSecrets{
 			Mac:     host,
-			Secrets: make([]secret, len(secrets)),
+			Secrets: make([]secret, 0, len(secrets)),
 		}
 		for k, v := range secrets {
 			updatedSecrets.Secrets = append(updatedSecrets.Secrets, secret{

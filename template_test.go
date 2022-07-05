@@ -104,6 +104,40 @@ func TestRenderFileWithSecrets(t *testing.T) {
 	assert.Equal("1234\n", result)
 }
 
+func TestRenderFileWithSharedSecrets(t *testing.T) {
+	assert := assert.New(t)
+
+	mockSecrets := new(MockSecrets)
+	mockSecrets.On("GetOrGenerate", "", "some-id").Return("1234", nil)
+
+	templateContents, err := ioutil.ReadFile(path.Join(fixturesDir(), "template", "shared-secrets.txt"))
+	assert.NoError(err)
+
+	renderer := pxeserver.Renderer{
+		Secrets: mockSecrets,
+	}
+
+	result, err := renderer.RenderFile(pxeserver.RenderFileArgs{
+		Mac:      "some-mac",
+		Template: string(templateContents),
+		Vars: map[string]interface{}{
+			"some_var": "{{ upper \"some_value\" }}",
+		},
+	})
+	assert.NoError(err)
+	assert.Equal("1234\n", result)
+
+	result, err = renderer.RenderFile(pxeserver.RenderFileArgs{
+		Mac:      "some-other-mac",
+		Template: string(templateContents),
+		Vars: map[string]interface{}{
+			"some_var": "{{ upper \"some_value\" }}",
+		},
+	})
+	assert.NoError(err)
+	assert.Equal("1234\n", result)
+}
+
 func TestRenderFileIgnoresFileDownloadHelpers(t *testing.T) {
 	assert := assert.New(t)
 
@@ -209,6 +243,32 @@ func TestRenderCmdlineVarsWithSecrets(t *testing.T) {
 	})
 	assert.NoError(err)
 
+	assert.Equal("some_boot_arg=1234", result)
+}
+
+func TestRenderCmdlineWithSharedSecrets(t *testing.T) {
+	assert := assert.New(t)
+
+	mockSecrets := new(MockSecrets)
+	mockSecrets.On("GetOrGenerate", "", "some-id").Return("1234", nil)
+	renderer := pxeserver.Renderer{
+		Secrets: mockSecrets,
+	}
+
+	result, err := renderer.RenderCmdline(pxeserver.RenderCmdlineArgs{
+		Mac:      "some-mac",
+		Template: "some_boot_arg={{ shared_secret \"some-id\" }}",
+		Vars:     map[string]interface{}{},
+	})
+	assert.NoError(err)
+	assert.Equal("some_boot_arg=1234", result)
+
+	result, err = renderer.RenderCmdline(pxeserver.RenderCmdlineArgs{
+		Mac:      "some-other-mac",
+		Template: "some_boot_arg={{ shared_secret \"some-id\" }}",
+		Vars:     map[string]interface{}{},
+	})
+	assert.NoError(err)
 	assert.Equal("some_boot_arg=1234", result)
 }
 
