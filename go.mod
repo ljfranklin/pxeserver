@@ -10,7 +10,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.5.1
 	go.universe.tf/netboot v0.0.0-00010101000000-000000000000
-	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904
+	golang.org/x/crypto v0.1.0
 	gopkg.in/yaml.v2 v2.3.0
 )
 
